@@ -218,12 +218,11 @@ prv_parse_input(lwshell_t* lwobj) {
 #endif /* LWSHELL_CFG_USE_STATIC_COMMANDS */
 #endif /* LWSHELL_CFG_USE_LIST_CMD */
             } else {
-                LWSHELL_OUTPUT(lwobj,
+                LWSHELL_OUTPUT(lwobj, "Unknown command"
 #if LWSHELL_CFG_USE_LIST_CMD
-                "Unknown command, use listcmd to list available commands\r\n"
-#else
-                "Unknown command\r\n"
-#endif
+                ", use listcmd to list available commands"
+#endif /* LWSHELL_CFG_USE_LIST_CMD */
+                "\r\n"
                 );
             }
         }
