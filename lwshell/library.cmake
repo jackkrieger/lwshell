@@ -26,9 +26,9 @@ set(lwshell_include_DIRS
 )
 
 # Register library to the system
-add_library(lwshell INTERFACE)
-target_sources(lwshell INTERFACE ${lwshell_core_SRCS})
-target_include_directories(lwshell INTERFACE ${lwshell_include_DIRS})
+add_library(lwshell)
+target_sources(lwshell PRIVATE ${lwshell_core_SRCS})
+target_include_directories(lwshell PUBLIC ${lwshell_include_DIRS})
 target_compile_options(lwshell PRIVATE ${LWSHELL_COMPILE_OPTIONS})
 target_compile_definitions(lwshell PRIVATE ${LWSHELL_COMPILE_DEFINITIONS})
 
