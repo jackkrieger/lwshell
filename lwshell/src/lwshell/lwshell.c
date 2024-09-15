@@ -93,138 +93,137 @@ prv_parse_input(lwshell_t* lwobj) {
     size_t s_len;
     char* str;
 
-    /* Check string length and compare with buffer pointer */
+    /* 
+     * Check string length and compare with buffer pointer
+     * Must be more than `1` character since we have to include end of line
+     */
     s_len = strlen(lwobj->buff);
-    if (s_len != lwobj->buff_ptr) {
+    if (s_len != lwobj->buff_ptr || lwobj->buff_ptr == 0) {
         return;
     }
 
-    /* Must be more than `1` character since we have to include end of line */
-    if (lwobj->buff_ptr > 0) {
-        /* Set default values */
-        lwobj->argc = 0;
-        lwobj->argv[0] = lwobj->buff;
+    /* Set default values */
+    lwobj->argc = 0;
+    lwobj->argv[0] = lwobj->buff;
 
-        /* Process complete input */
-        str = lwobj->buff;
+    /* Process complete input */
+    str = lwobj->buff;
 
-        /* Process complete string */
-        while (*str != '\0') {
-            while (*str == ' ' && ++str) {} /* Remove leading spaces */
+    /* Process complete string */
+    while (*str != '\0') {
+        while (*str == ' ' && ++str) {} /* Remove leading spaces */
+        if (*str == '\0') {
+            break;
+        }
+
+        /* Check if it starts with quote to handle escapes */
+        if (*str == '"') {
+            ++str;
+            lwobj->argv[lwobj->argc++] = str; /* Set start of argument after quotes */
+
+            /* Process until end of quote */
+            while (*str != '\0') {
+                if (*str == '\\') {
+                    ++str;
+                    if (*str == '"') {
+                        ++str;
+                    }
+                } else if (*str == '"') {
+                    *str = '\0';
+                    ++str;
+                    break;
+                } else {
+                    ++str;
+                }
+            }
+        } else {
+            lwobj->argv[lwobj->argc++] = str; /* Set start of argument directly on character */
+            while (*str != ' ' && *str != '\0') {
+                if (*str == '"') { /* Quote should not be here... */
+                    *str = '\0';   /* ...add NULL termination to end token */
+                }
+                ++str;
+            }
             if (*str == '\0') {
                 break;
             }
-
-            /* Check if it starts with quote to handle escapes */
-            if (*str == '"') {
-                ++str;
-                lwobj->argv[lwobj->argc++] = str; /* Set start of argument after quotes */
-
-                /* Process until end of quote */
-                while (*str != '\0') {
-                    if (*str == '\\') {
-                        ++str;
-                        if (*str == '"') {
-                            ++str;
-                        }
-                    } else if (*str == '"') {
-                        *str = '\0';
-                        ++str;
-                        break;
-                    } else {
-                        ++str;
-                    }
-                }
-            } else {
-                lwobj->argv[lwobj->argc++] = str; /* Set start of argument directly on character */
-                while (*str != ' ' && *str != '\0') {
-                    if (*str == '"') { /* Quote should not be here... */
-                        *str = '\0';   /* ...add NULL termination to end token */
-                    }
-                    ++str;
-                }
-                if (*str == '\0') {
-                    break;
-                }
-                *str = '\0';
-                ++str;
-            }
-
-            /* Check for number of arguments */
-            if (lwobj->argc == LWSHELL_ARRAYSIZE(lwobj->argv)) {
-                break;
-            }
+            *str = '\0';
+            ++str;
         }
 
-        /* Check for command */
-        if (lwobj->argc > 0) {
-            const lwshell_cmd_t* ccmd = NULL;
-            size_t arg_len = strlen(lwobj->argv[0]);
+        /* Check for number of arguments */
+        if (lwobj->argc == LWSHELL_ARRAYSIZE(lwobj->argv)) {
+            break;
+        }
+    }
+
+    /* Check for command */
+    if (lwobj->argc > 0) {
+        const lwshell_cmd_t* ccmd = NULL;
+        size_t arg_len = strlen(lwobj->argv[0]);
 
 #if LWSHELL_CFG_USE_DYNAMIC_COMMANDS
-            /* Process all dynamic commands */
-            if (ccmd == NULL && lwobj->dynamic_cmds_cnt > 0) {
-                for (size_t idx = 0; idx < lwobj->dynamic_cmds_cnt; ++idx) {
-                    if (arg_len == strlen(lwobj->dynamic_cmds[idx].name)
-                        && strncmp(lwobj->dynamic_cmds[idx].name, lwobj->argv[0], arg_len) == 0) {
-                        ccmd = &lwobj->dynamic_cmds[idx];
-                        break;
-                    }
+        /* Process all dynamic commands */
+        if (ccmd == NULL && lwobj->dynamic_cmds_cnt > 0) {
+            for (size_t idx = 0; idx < lwobj->dynamic_cmds_cnt; ++idx) {
+                if (arg_len == strlen(lwobj->dynamic_cmds[idx].name)
+                    && strncmp(lwobj->dynamic_cmds[idx].name, lwobj->argv[0], arg_len) == 0) {
+                    ccmd = &lwobj->dynamic_cmds[idx];
+                    break;
                 }
             }
+        }
 #endif /* LWSHELL_CFG_USE_DYNAMIC_COMMANDS */
 
 #if LWSHELL_CFG_USE_STATIC_COMMANDS
-            /* Process all static commands */
-            if (ccmd == NULL && lwobj->static_cmds != NULL && lwobj->static_cmds_cnt > 0) {
-                for (size_t idx = 0; idx < lwobj->static_cmds_cnt; ++idx) {
-                    if (arg_len == strlen(lwobj->static_cmds[idx].name)
-                        && strncmp(lwobj->static_cmds[idx].name, lwobj->argv[0], arg_len) == 0) {
-                        ccmd = &lwobj->static_cmds[idx];
-                        break;
-                    }
+        /* Process all static commands */
+        if (ccmd == NULL && lwobj->static_cmds != NULL && lwobj->static_cmds_cnt > 0) {
+            for (size_t idx = 0; idx < lwobj->static_cmds_cnt; ++idx) {
+                if (arg_len == strlen(lwobj->static_cmds[idx].name)
+                    && strncmp(lwobj->static_cmds[idx].name, lwobj->argv[0], arg_len) == 0) {
+                    ccmd = &lwobj->static_cmds[idx];
+                    break;
                 }
             }
+        }
 #endif /* LWSHELL_CFG_USE_STATIC_COMMANDS */
 
-            /* Valid command ready? */
-            if (ccmd != NULL) {
-                if (lwobj->argc == 2U && lwobj->argv[1][0] == '-' && lwobj->argv[1][1] == 'h'
-                    && lwobj->argv[1][2] == '\0') {
-                    /* Here we can print version */
-                    LWSHELL_OUTPUT(lwobj, ccmd->desc);
-                    LWSHELL_OUTPUT(lwobj, "\r\n");
-                } else {
-                    ccmd->fn(lwobj->argc, lwobj->argv);
-                }
-#if LWSHELL_CFG_USE_LIST_CMD
-            } else if (strncmp(lwobj->argv[0], "listcmd", 7U) == 0) {
-                LWSHELL_OUTPUT(lwobj, "List of registered commands\r\n");
-#if LWSHELL_CFG_USE_DYNAMIC_COMMANDS
-                for (size_t idx = 0; idx < lwobj->dynamic_cmds_cnt; ++idx) {
-                    LWSHELL_OUTPUT(lwobj, lwobj->dynamic_cmds[idx].name);
-                    LWSHELL_OUTPUT(lwobj, "\t\t\t");
-                    LWSHELL_OUTPUT(lwobj, lwobj->dynamic_cmds[idx].desc);
-                    LWSHELL_OUTPUT(lwobj, "\r\n");
-                }
-#endif /* LWSHELL_CFG_USE_DYNAMIC_COMMANDS */
-#if LWSHELL_CFG_USE_STATIC_COMMANDS
-                for (size_t idx = 0; idx < lwobj->static_cmds_cnt; ++idx) {
-                    LWSHELL_OUTPUT(lwobj, lwobj->static_cmds[idx].name);
-                    LWSHELL_OUTPUT(lwobj, "\t\t\t");
-                    LWSHELL_OUTPUT(lwobj, lwobj->static_cmds[idx].desc);
-                    LWSHELL_OUTPUT(lwobj, "\r\n");
-                }
-#endif /* LWSHELL_CFG_USE_STATIC_COMMANDS */
-#endif /* LWSHELL_CFG_USE_LIST_CMD */
+        /* Valid command ready? */
+        if (ccmd != NULL) {
+            if (lwobj->argc == 2U && lwobj->argv[1][0] == '-' && lwobj->argv[1][1] == 'h'
+                && lwobj->argv[1][2] == '\0') {
+                /* Here we can print version */
+                LWSHELL_OUTPUT(lwobj, ccmd->desc);
+                LWSHELL_OUTPUT(lwobj, "\r\n");
             } else {
-                LWSHELL_OUTPUT(lwobj, "Unknown command"
-#if LWSHELL_CFG_USE_LIST_CMD
-                ", use listcmd to list available commands"
-#endif /* LWSHELL_CFG_USE_LIST_CMD */
-                "\r\n"
-                );
+                ccmd->fn(lwobj->argc, lwobj->argv);
             }
+#if LWSHELL_CFG_USE_LIST_CMD
+        } else if (strncmp(lwobj->argv[0], "listcmd", 7U) == 0) {
+            LWSHELL_OUTPUT(lwobj, "List of registered commands\r\n");
+#if LWSHELL_CFG_USE_DYNAMIC_COMMANDS
+            for (size_t idx = 0; idx < lwobj->dynamic_cmds_cnt; ++idx) {
+                LWSHELL_OUTPUT(lwobj, lwobj->dynamic_cmds[idx].name);
+                LWSHELL_OUTPUT(lwobj, "\t\t\t");
+                LWSHELL_OUTPUT(lwobj, lwobj->dynamic_cmds[idx].desc);
+                LWSHELL_OUTPUT(lwobj, "\r\n");
+            }
+#endif /* LWSHELL_CFG_USE_DYNAMIC_COMMANDS */
+#if LWSHELL_CFG_USE_STATIC_COMMANDS
+            for (size_t idx = 0; idx < lwobj->static_cmds_cnt; ++idx) {
+                LWSHELL_OUTPUT(lwobj, lwobj->static_cmds[idx].name);
+                LWSHELL_OUTPUT(lwobj, "\t\t\t");
+                LWSHELL_OUTPUT(lwobj, lwobj->static_cmds[idx].desc);
+                LWSHELL_OUTPUT(lwobj, "\r\n");
+            }
+#endif /* LWSHELL_CFG_USE_STATIC_COMMANDS */
+#endif /* LWSHELL_CFG_USE_LIST_CMD */
+        } else {
+            LWSHELL_OUTPUT(lwobj, "Unknown command"
+#if LWSHELL_CFG_USE_LIST_CMD
+                                  ", use listcmd to list available commands"
+#endif /* LWSHELL_CFG_USE_LIST_CMD */
+                                  "\r\n");
         }
     }
 }

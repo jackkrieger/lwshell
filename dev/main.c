@@ -1,7 +1,7 @@
-#include <stdio.h>
-#include "lwshell/lwshell.h"
-#include <string.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "lwshell/lwshell.h"
 
 /**
  * \brief           Reading one character at a time 
@@ -18,6 +18,7 @@
 #endif
 
 void example_minimal(void);
+extern void run_test(void);
 
 #if LWSHELL_CFG_USE_OUTPUT
 
@@ -139,6 +140,9 @@ main(void) {
     /* Add optional output function for the purpose of the feedback */
     lwshell_set_output_fn(shell_output);
 #endif /* LWSHELL_CFG_USE_OUTPUT */
+
+    /* Run the test */
+    run_test();
 
 #if LWSHELL_CFG_USE_DYNAMIC_COMMANDS
     /* Define shell commands */
