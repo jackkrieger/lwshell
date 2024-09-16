@@ -37,6 +37,15 @@ static const test_str_t commands[] = {
                 "longer text",
             },
     },
+    {
+        .command = "test 123 \"longer text with \\\" quotes\"\n",
+        .args_list =
+            {
+                "test",
+                "123",
+                "longer text with \\\" quotes",
+            },
+    },
 };
 static uint32_t current_cmd_index;
 
@@ -50,10 +59,10 @@ static uint32_t current_cmd_index;
 int32_t
 prv_test_cmd(int32_t argc, char** argv) {
     const test_str_t* cmd = &commands[current_cmd_index];
-    size_t cmd_args_count = 0;
+    int32_t cmd_args_count;
 
     /* Get list of arguments from test command */
-    for (cmd_args_count; cmd->args_list[cmd_args_count] != NULL; ++cmd_args_count) {}
+    for (cmd_args_count = 0; cmd->args_list[cmd_args_count] != NULL; ++cmd_args_count) {}
     if (cmd_args_count != argc) {
         printf("Test failed: Expected argument count (%02u) does not match actual argument count (%02u)\r\n",
                (unsigned)cmd_args_count, (unsigned)argc);
@@ -61,7 +70,7 @@ prv_test_cmd(int32_t argc, char** argv) {
     }
 
     /* Check if parameters match */
-    for (size_t idx = 0; idx < argc; ++idx) {
+    for (int32_t idx = 0; idx < argc; ++idx) {
         /* Argument failed */
         if (strcmp(cmd->args_list[idx], argv[idx]) != 0) {
             printf("Test failed: Argument index %02u, value \"%s\" does not match actual argument value \"%s\"\r\n",
