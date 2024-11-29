@@ -233,7 +233,7 @@ prv_parse_input(lwshell_t* lwobj) {
  */
 lwshellr_t
 lwshell_init_ex(lwshell_t* lwobj) {
-    lwobj = LWSHELL_GET_LWOBJ(NULL);
+    lwobj = LWSHELL_GET_LWOBJ(lwobj);
     LWSHELL_MEMSET(lwobj, 0x00, sizeof(*lwobj));
     return lwshellOK;
 }
