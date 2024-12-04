@@ -219,11 +219,9 @@ prv_parse_input(lwshell_t* lwobj) {
 #endif /* LWSHELL_CFG_USE_STATIC_COMMANDS */
 #endif /* LWSHELL_CFG_USE_LIST_CMD */
         } else {
-            LWSHELL_OUTPUT(lwobj, "Unknown command"
-#if LWSHELL_CFG_USE_LIST_CMD
-                                  ", use listcmd to list available commands"
-#endif /* LWSHELL_CFG_USE_LIST_CMD */
-                                  "\r\n");
+            LWSHELL_OUTPUT(lwobj, LWSHELL_CFG_USE_LIST_CMD
+                                      ? "Unknown command, use listcmd to list available commands\r\n"
+                                      : "Unknown command\r\n");
         }
     }
 }
@@ -235,7 +233,7 @@ prv_parse_input(lwshell_t* lwobj) {
  */
 lwshellr_t
 lwshell_init_ex(lwshell_t* lwobj) {
-    lwobj = LWSHELL_GET_LWOBJ(NULL);
+    lwobj = LWSHELL_GET_LWOBJ(lwobj);
     LWSHELL_MEMSET(lwobj, 0x00, sizeof(*lwobj));
     return lwshellOK;
 }
@@ -330,14 +328,9 @@ lwshell_input_ex(lwshell_t* lwobj, const void* in_data, size_t len) {
     /* Process all bytes */
     for (size_t idx = 0; idx < len; ++idx) {
         switch (p_data[idx]) {
-            case LWSHELL_ASCII_CR: {
-                LWSHELL_OUTPUT(lwobj, "\r");
-                prv_parse_input(lwobj);
-                LWSHELL_RESET_BUFF(lwobj);
-                break;
-            }
+            case LWSHELL_ASCII_CR:
             case LWSHELL_ASCII_LF: {
-                LWSHELL_OUTPUT(lwobj, "\n");
+                LWSHELL_OUTPUT(lwobj, p_data[idx] == LWSHELL_ASCII_CR ? "\r" : "\n");
                 prv_parse_input(lwobj);
                 LWSHELL_RESET_BUFF(lwobj);
                 break;
